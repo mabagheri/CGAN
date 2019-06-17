@@ -64,19 +64,19 @@ class CGAN:
         labels_embedded = Reshape((self.img_width, self.img_height, self.n_channels))(labels_embedded)
 
         x = concatenate([x, labels_embedded])
-        x = LeakyReLU(alpha=0.2)(x)
+        x = LeakyReLU(alpha=0.1)(x)
 
         x = Conv2D(filters=32, kernel_size=5, strides=2, padding='same')(x)
-        x = LeakyReLU(alpha=0.2)(x)
+        x = LeakyReLU(alpha=0.1)(x)
 
         x = Conv2D(filters=64, kernel_size=5, strides=2, padding='same')(x)
-        x = LeakyReLU(alpha=0.2)(x)
+        x = LeakyReLU(alpha=0.1)(x)
 
         x = Conv2D(filters=128, kernel_size=5, strides=2, padding='same')(x)
-        x = LeakyReLU(alpha=0.2)(x)
+        x = LeakyReLU(alpha=0.1)(x)
 
         x = Conv2D(filters=256, kernel_size=5, strides=1, padding='same')(x)
-        x = LeakyReLU(alpha=0.2)(x)
+        x = LeakyReLU(alpha=0.1)(x)
 
         x = Flatten()(x)
         x = Dense(1)(x)
@@ -88,15 +88,13 @@ class CGAN:
 
     def build_generator(self):
         image_resize = self.img_height // 4
-        # network parameters
-        layer_filters = [128, 64, 32, 1]
 
         inputs = Input(shape=(self.latent_dim,), name='z_input')
         labels = Input(shape=(self.n_classes,), name='class_labels')
 
         x = concatenate([inputs, labels], axis=1)
-        x = Dense(image_resize * image_resize * layer_filters[0])(x)
-        x = Reshape((image_resize, image_resize, layer_filters[0]))(x)
+        x = Dense(image_resize * image_resize * 128)(x)
+        x = Reshape((image_resize, image_resize, 128))(x)
 
         x = BatchNormalization()(x)
         x = Activation('relu')(x)
@@ -144,12 +142,12 @@ class CGAN:
             # we can use labels instead of fake_labels; because it is fake for noise
             gen_imgs = self.generator.predict([noise, labels])
 
-            # Train the discriminator
+            # --------------------- Train the Discriminator ---------------------
             d_loss_real = self.discriminator.train_on_batch([imgs, labels], real)
             d_loss_fake = self.discriminator.train_on_batch([gen_imgs, labels], fake)
             d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
-            #  --------------------- Train Generator ---------------------
+            #  --------------------- Train the Generator ---------------------
             # Condition on labels (random one-hot labels)
             fake_labels = np.eye(self.n_classes)[np.random.choice(self.n_classes, batch_size)]
 
@@ -183,7 +181,7 @@ class CGAN:
                 axs[i, j].set_title("Digit: %d" % sampled_labels[cnt])
                 axs[i, j].axis('off')
                 cnt += 1
-        fig.savefig("images/%d.png" % epoch)
+        fig.savefig("images/%d.png" % epoch, bbox_inches='tight', dpi=200)
         plt.close()
 
     def generate_noise(self, type_of_noise, batch_size):
